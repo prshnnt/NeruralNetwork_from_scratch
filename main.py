@@ -69,9 +69,10 @@ class Layer:
 			return
 		dW = delta @ self.X.T
 		db = delta
+		# calc delta before updating weights
+		delta = (self.W.T @ delta) * relu_derivative(self.prev_layer.Z)
 		self.W -= lr * dW
 		self.b -= lr * db
-		delta = (self.W.T @ delta) * relu_derivative(self.prev_layer.Z)
 		return self.prev_layer.backward(delta)
 
 
