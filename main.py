@@ -75,34 +75,46 @@ class Layer:
 		self.b -= lr * db
 		return self.prev_layer.backward(delta)
 
+class Model:
+	def __init__(self,shape):
+		self.layers = []
+		for i in range(len(shape)-1):
+			self.layers.append(
+					Layer(
+							shape[i],shape[i+1],
+							prev_layer=(
+									self.layers[-1] if len(self.layers)>0 else None
+									)
+							)
+					)
+		self.layers[-1].last = True
+	def forward(self,input):
+		for layer in self.layers:
+			input = layer.forward(input)
+		return input
+	def backward(self,delta):
+		self.layers[-1].backward(delta)
+	def fit(self,X,Y):
+		for x,y in zip(X,Y):
+			y_hat = self.forward(x)
+			delta = y_hat - y
+			self.backward(delta)
+	def predict(self,x):
+		return np.argmax(self.forward(x))
 
 
-l1 = Layer(784, 128)
-l2 = Layer(128, 10,prev_layer=l1)
-
-def forward(input):
-	l1_output = l1.forward(input)
-	l2_output = l2.forward(l1_output)
-	return softmax(l2_output)
-
-loss = 0
-
-for i in range(len(train)):
-	X = np.array(get_at(i))
-	Y = y_at(i)
-
-	out = forward(X)
-	loss += -np.sum(Y * np.log(out + 1e-12))
-	delta = out - Y
-	l2.backward(delta)
-
-loss/=1000
-print("Loss:" , loss)
-
-i = 1
-
-test_y = y_at(i)
-text_x = np.array(get_at(i))
-out = forward(text_x)
-print(np.argmax(out), np.argmax(test_y))
-display(i)
+def train(model):
+	for epoch in range(1):
+		# permutation = np.random.permutation(len(train))
+		X = np.array(train.iloc[:,1:])
+		# X = X[permutation]
+		Y = np.array([y_at(idx) for idx in train.iloc[:,0]])
+		# Y = Y[permutation]
+		model.fit(X,Y)
+		print("epoch:",epoch)
+def test(model):
+	import random
+	i = random.randint(0,len(test))
+	i = 1203
+	print(model.predict(np.array(get_at(i))))
+	display(i)
