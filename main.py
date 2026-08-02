@@ -17,19 +17,19 @@ lr = 0.001
 
 # train.iloc[:,1:] /= 255.0
 
-def get_at(idx):
-	return train.iloc[idx, 1:]
-def get_label_at(idx):
-	return train.iloc[idx, 0]
+def get_at(idx,data):
+	return data.iloc[idx, 1:]
+def get_label_at(idx,data):
+	return data.iloc[idx, 0]
 
-def y_at(idx):
+def one_hot(label):
 	#one hot encoded Y vector
 	y = np.zeros((10,1))
-	y[get_label_at(idx)] = 1
+	y[label] = 1
 	return y
 
-def display(idx):
-	plt.imshow(np.array(get_at(idx)).reshape(28, 28), cmap="gray")
+def display(idx,data):
+	plt.imshow(np.array(get_at(idx,data)).reshape(28, 28), cmap="gray")
 	plt.show()
 
 # print(set(get_at(0)))
@@ -103,18 +103,26 @@ class Model:
 		return np.argmax(self.forward(x))
 
 
-def train(model):
+def train_model(model):
 	for epoch in range(1):
 		# permutation = np.random.permutation(len(train))
 		X = np.array(train.iloc[:,1:])
 		# X = X[permutation]
-		Y = np.array([y_at(idx) for idx in train.iloc[:,0]])
+		Y = np.array([one_hot(label) for label in train.iloc[:,0]])
 		# Y = Y[permutation]
 		model.fit(X,Y)
 		print("epoch:",epoch)
-def test(model):
+def test_model(model):
 	import random
 	i = random.randint(0,len(test))
-	i = 1203
-	print(model.predict(np.array(get_at(i))))
-	display(i)
+	i = 120
+	print(model.predict(np.array(get_at(i,test))))
+	display(i,test)
+
+def main():
+	model = Model([784,128,10])
+	train_model(model)
+	test_model(model)
+
+if __name__ == "__main__":
+	main()
