@@ -96,6 +96,17 @@ class Model:
 			self.backward(delta)
 	def predict(self,x):
 		return np.argmax(self.forward(x))
+	def save(self):
+		import pickle
+		with open("model.pickle","wb") as f:
+			pickle.dump(self,f)
+	@staticmethod
+	def load(path):
+		with open(path) as f:
+			import pickle
+			obj = pickle.load(f)
+			return obj
+
 
 
 def train_model(model):
