@@ -49,31 +49,32 @@ def softmax(z):
 
 
 class Layer:
-	def __init__(self,ip,op,prev_layer=None):
+	def __init__(self,ip,op,prev_layer=None,last=False):
 		self.X = None
 		self.W = np.random.randn(op, ip) * np.sqrt(2.0 / ip)
 		self.b = np.zeros((op,1))
 		self.Z = None
 		self.A = None
 		self.prev_layer = prev_layer
+		self.last = last
 
 	def forward(self, X):
 		self.X = X.reshape(-1, 1)
 		self.Z = self.W @ self.X + self.b
 		# print("Z shape:", self.Z.shape)
-		self.A = relu(self.Z)
+		self.A = relu(self.Z) if not self.last else softmax(self.Z)
 		return self.A
 
 	def backward(self,delta):
-		if self.prev_layer is None:
-			return
 		dW = delta @ self.X.T
 		db = delta
 		# calc delta before updating weights
-		delta = (self.W.T @ delta) * relu_derivative(self.prev_layer.Z)
+		if self.prev_layer is not None:
+			delta = (self.W.T @ delta) * relu_derivative(self.prev_layer.Z)
 		self.W -= lr * dW
 		self.b -= lr * db
-		return self.prev_layer.backward(delta)
+		if self.prev_layer is not None:
+			return self.prev_layer.backward(delta)
 
 class Model:
 	def __init__(self,shape):
@@ -104,12 +105,12 @@ class Model:
 
 
 def train_model(model):
+	permutation = np.random.permutation(len(train))
 	for epoch in range(1):
-		# permutation = np.random.permutation(len(train))
 		X = np.array(train.iloc[:,1:])
-		# X = X[permutation]
+		X = X[permutation]
 		Y = np.array([one_hot(label) for label in train.iloc[:,0]])
-		# Y = Y[permutation]
+		Y = Y[permutation]
 		model.fit(X,Y)
 		print("epoch:",epoch)
 def test_model(model):
