@@ -10,6 +10,7 @@ test = pd.read_csv("./sample_data/mnist_test.csv", header=None)
 lr = 0.01
 beta = .9
 EPOCHS = 5
+batch_size = 32
 
 # train.iloc[:,1:] /= 255.0
 
@@ -42,9 +43,9 @@ def softmax(z):
         z = z - np.max(z, axis=0, keepdims=True)
         e = np.exp(z)
         return e / np.sum(e, axis=0, keepdims=True)
-def cross_entropy(y, y_hat):
+def cross_entropy(Y, Y_hat):
     eps = 1e-12
-    return -np.sum(y * np.log(y_hat + eps))
+    return -np.sum(Y * np.log(Y_hat + eps)) / Y.shape[1]
 
 class Grad:
     def __init__(self,dW:np.ndarray,db:np.ndarray):        
@@ -69,10 +70,13 @@ class Layer:
         self.last = last
 
     def forward(self, X):
-        self.X = X.reshape(-1, 1)
+        # self.X = X.reshape(-1, 1)
+        self.X = X
         self.Z = self.W @ self.X + self.b
-        # print("Z shape:", self.Z.shape)
-        self.A = relu(self.Z) if not self.last else softmax(self.Z)
+        if self.last:
+            self.A = softmax(self.Z)
+        else:
+            self.A = relu(self.Z)
         return self.A
 
 class Model:
@@ -88,12 +92,15 @@ class Model:
             input = layer.forward(input)
         return input
     def backward(self,delta):
-        # self.layers[-1].backward(delta)
+
+        batch_size = delta.shape[1]
+        
         for i in reversed(range(len(self.layers))):
+
             layer = self.layers[i]
 
-            dW = delta @ layer.X.T
-            db = delta
+            dW = delta @ layer.X.T / batch_size
+            db = np.sum(delta,axis=1,keepdims=True) / batch_size
             layer.grad.set(dW,db)
             if i>0:
                 delta = (
@@ -101,17 +108,33 @@ class Model:
                     * relu_derivative(self.layers[i-1].Z)
                 )
             
-    def fit(self,X,Y):
-        total_loss = 0
-        for x,y in zip(X,Y):
-            y_hat = self.forward(x)
-            total_loss += cross_entropy(y,y_hat)
-            delta = y_hat - y
+    def fit(self,X,Y,batch_size = 64):
+        n = X.shape[1] # len of input data
+        total_loss = 0.0
+
+        for start in range(0, n , batch_size):
+            end = min(start + batch_size,n)
+
+            X_batch = X[:,start:end]
+            Y_batch = Y[:,start:end]
+
+            # forward pass
+            Y_hat = self.forward(X_batch)
+
+            total_loss += cross_entropy(
+                Y_batch,
+                Y_hat
+            ) * X_batch.shape[1]
+
+            delta = Y_hat - Y_batch
+
             self.backward(delta)
+
             self.optimize()
-        return total_loss/len(X)
+        return total_loss / n
+    
     def predict(self,x):
-        return np.argmax(self.forward(x))
+        return np.argmax(self.forward(x),axis=0)
     def save(self):
         import pickle
         with open("model.pickle","wb") as f:
@@ -144,42 +167,37 @@ class Model:
 
 def train_model(model:Model):
     # Normalize pixel values to [0, 1] -- fixes exploding activations/gradients
-    X_all = np.array(train.iloc[:, 1:]) / 255.0
-    Y_all = np.array([one_hot(label) for label in train.iloc[:, 0]])
+    X_all = train.iloc[:, 1:].to_numpy(dtype=np.float32).T / 255.0
+
+    labels = train.iloc[:,0].to_numpy(dtype=int)
+
+    Y_all = np.zeros((10,len(labels)),dtype=int)
+    Y_all[labels,np.arange(len(labels))]=1
  
     for epoch in range(EPOCHS):
-        permutation = np.random.permutation(len(train))
-        X = X_all[permutation]
-        Y = Y_all[permutation]
-        loss = model.fit(X, Y)
- 
-        # quick training accuracy check
-        correct = 0
-        for x, label in zip(X_all, Y_all):
-            pred = model.predict(x)
-            label = np.argmax(label)
-            correct += (pred == label)
-        print(f"epoch: {epoch}  train acc (sample): {correct / len(X_all)}  loss:{loss:.5f}")
+        permutation = np.random.permutation(X_all.shape[1])
+        X = X_all[:,permutation]
+        Y = Y_all[:,permutation]
+        loss = model.fit(X, Y,batch_size)
+
+        print(f"epoch: {epoch}  loss:{loss:.5f}")
  
  
 def test_model(model:Model):
-    X_test = np.array(test.iloc[:,1:] / 255.0)
-    Y_test = np.array(test.iloc[:,0],dtype=int)
+    X_test = test.iloc[:,1:].to_numpy(dtype=np.float32).T / 255.0
+    Y_test = test.iloc[:,0].to_numpy(dtype=int)
 
-    correct = 0
-    for x , label in zip(X_test,Y_test):
-        pred = model.predict(x)
-        correct += (pred == label)
+    pred = model.predict(X_test)
 
-    accuracy = correct / len(X_test)
+    accuracy = np.mean(pred==Y_test)
 
     print(f"Test Accuracy: {accuracy:.4f}")
 
     # testing the model and showing results
     i = random.randint(0, len(test) - 1)
-    x = X_test[i]
-    print("Predicted:", model.predict(x))
-    print("Actual:", get_label_at(i, test))
+    x = X_test[:,i:i+1]
+    print("Predicted:", model.predict(x)[0])
+    print("Actual:", Y_test[i])
     display(i, test)
 
 
