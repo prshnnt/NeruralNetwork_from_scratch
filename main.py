@@ -15,7 +15,7 @@ batch_size = 32
 # train.iloc[:,1:] /= 255.0
 
 def get_at(idx,data):
-    return data.iloc[idx, 1:].to_numpy(dtype=np.float64)
+    return data.iloc[idx, 1:].to_numpy(dtype=np.float16)
 def get_label_at(idx,data):
     return int(data.iloc[idx, 0])
 
@@ -167,7 +167,7 @@ class Model:
 
 def train_model(model:Model):
     # Normalize pixel values to [0, 1] -- fixes exploding activations/gradients
-    X_all = train.iloc[:, 1:].to_numpy(dtype=np.float32).T / 255.0
+    X_all = train.iloc[:, 1:].to_numpy(dtype=np.float16).T / 255.0
 
     labels = train.iloc[:,0].to_numpy(dtype=int)
 
@@ -184,7 +184,7 @@ def train_model(model:Model):
  
  
 def test_model(model:Model):
-    X_test = test.iloc[:,1:].to_numpy(dtype=np.float32).T / 255.0
+    X_test = test.iloc[:,1:].to_numpy(dtype=np.float16).T / 255.0
     Y_test = test.iloc[:,0].to_numpy(dtype=int)
 
     pred = model.predict(X_test)
