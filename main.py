@@ -37,7 +37,7 @@ def relu(Z):
     return np.maximum(0, Z)
 
 def relu_derivative(Z):
-    return (Z > 0).astype(float)
+    return (Z > 0).astype(np.float16)
 
 def softmax(z):
         z = z - np.max(z, axis=0, keepdims=True)
