@@ -4,6 +4,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.neural_network import MLPRegressor
 from sklearn.metrics import mean_squared_error
+import matplotlib.pyplot as plt
 
 # 1. Load and prepare dataset (64 features per sample)
 X, _ = load_digits(return_X_y=True)
@@ -19,7 +20,7 @@ X_test_scaled = scaler.transform(X_test)
 # Decoder: 8 -> 32 -> 64
 autoencoder = MLPRegressor(
     hidden_layer_sizes=(32, 8, 32),
-    activation='relu',
+    activation='logistic',
     solver='adam',
     max_iter=1000,
     random_state=42
@@ -49,3 +50,36 @@ def encode(model, X):
 compressed_X_test = encode(autoencoder, X_test_scaled)
 print("Original shape:", X_test_scaled.shape)      # (360, 64)
 print("Compressed shape:", compressed_X_test.shape)  # (360, 8)
+# print("Compressed :", compressed_X_test)  # (360, 8)
+
+# Number of digits to display
+n_digits = 10
+
+fig, axes = plt.subplots(3, n_digits, figsize=(15, 5))
+
+for i in range(n_digits):
+    # Reshape 64D vectors back to 8x8 images
+    orig_img = X_test_scaled[i].reshape(8, 8)
+    recon_img = reconstructed[i].reshape(8, 8)
+    diff_img = np.abs(orig_img - recon_img)
+
+    # Row 1: Original Digits
+    axes[0, i].imshow(orig_img, cmap='gray_r', vmin=0, vmax=1)
+    axes[0, i].axis('off')
+    if i == 0:
+        axes[0, i].set_title("Original", loc='left', fontsize=12, fontweight='bold')
+
+    # Row 2: Reconstructed Digits
+    axes[1, i].imshow(recon_img, cmap='gray_r', vmin=0, vmax=1)
+    axes[1, i].axis('off')
+    if i == 0:
+        axes[1, i].set_title("Reconstructed", loc='left', fontsize=12, fontweight='bold')
+
+    # Row 3: Absolute Pixel Difference
+    axes[2, i].imshow(diff_img, cmap='hot', vmin=0, vmax=1)
+    axes[2, i].axis('off')
+    if i == 0:
+        axes[2, i].set_title("Difference (Error)", loc='left', fontsize=12, fontweight='bold')
+
+plt.tight_layout()
+plt.show()
