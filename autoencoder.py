@@ -19,8 +19,8 @@ X_test_scaled = scaler.transform(X_test)
 # Encoder: 64 -> 32 -> 8 (bottleneck)
 # Decoder: 8 -> 32 -> 64
 autoencoder = MLPRegressor(
-    hidden_layer_sizes=(32, 8, 32),
-    activation='logistic',
+    hidden_layer_sizes=(32,32,32),
+    activation='relu',
     solver='adam',
     max_iter=1000,
     random_state=42
